@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat - Kontak</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+    #container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+    }
+    button {
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+    .card {
+      background: #1e1e1e;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    #logoutBtn {
+      background: #f44336;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h2>Chat</h2>
+
+    <!-- Tombol Login -->
+    <button id="loginBtn">Login dengan Google</button>
+    <div id="userInfo" style="display:none;">
+      <p id="welcomeText"></p>
+      <input type="text" id="usernameInput" placeholder="Pilih username unik" />
+      <button id="saveUsernameBtn">Simpan Username</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
+
+    <!-- Pencarian -->
+    <div id="searchArea" style="display:none;">
+      <hr>
+      <h3>Cari Kontak</h3>
+      <input type="text" id="searchInput" placeholder="Masukkan username...">
+      <button id="searchBtn">Cari</button>
+      <div id="searchResult"></div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDPRX2nyEeLJsmXgwahVoo48tH4qNgR-QA",
+      authDomain: "chat-ef550.firebaseapp.com",
+      projectId: "chat-ef550",
+      storageBucket: "chat-ef550.firebasestorage.app",
+      messagingSenderId: "126809001422",
+      appId: "1:126809001422:web:73c0acc196642f1adf6f9f",
+      databaseURL: "https://chat-ef550-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const usernameInput = document.getElementById('usernameInput');
+    const saveUsernameBtn = document.getElementById('saveUsernameBtn');
+    const userInfo = document.getElementById('userInfo');
+    const welcomeText = document.getElementById('welcomeText');
+    const searchArea = document.getElementById('searchArea');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchResult = document.getElementById('searchResult');
+
+    let currentUser = null;
+
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    logoutBtn.onclick = () => auth.signOut();
+
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = 'none';
+        userInfo.style.display = 'block';
+        welcomeText.textContent = `Halo, ${user.displayName}`;
+
+        // cek apakah user sudah punya username
+        const userSnap = await db.ref("users/" + user.uid).get();
+        if (userSnap.exists() && userSnap.val().username) {
+          usernameInput.style.display = 'none';
+          saveUsernameBtn.style.display = 'none';
+          searchArea.style.display = 'block';
+        }
+      } else {
+        currentUser = null;
+        loginBtn.style.display = 'block';
+        userInfo.style.display = 'none';
+        searchArea.style.display = 'none';
+        searchResult.innerHTML = '';
+      }
+    });
+
+    saveUsernameBtn.onclick = async () => {
+      const username = usernameInput.value.trim();
+      if (!username) return alert("Username wajib diisi.");
+      const snap = await db.ref("usernames/" + username).get();
+      if (snap.exists()) {
+        alert("Username sudah digunakan.");
+      } else {
+        await db.ref("usernames/" + username).set(currentUser.uid);
+        await db.ref("users/" + currentUser.uid).set({
+          displayName: currentUser.displayName,
+          email: currentUser.email,
+          username: username
+        });
+        alert("Username disimpan.");
+        usernameInput.style.display = 'none';
+        saveUsernameBtn.style.display = 'none';
+        searchArea.style.display = 'block';
+      }
+    };
+
+    searchBtn.onclick = async () => {
+      const username = searchInput.value.trim();
+      if (!username) return;
+      const snap = await db.ref("usernames/" + username).get();
+      if (snap.exists()) {
+        const uid = snap.val();
+        if (uid === currentUser.uid) {
+          searchResult.innerHTML = `<div class="card">Itu adalah akun Anda sendiri.</div>`;
+          return;
+        }
+        const userSnap = await db.ref("users/" + uid).get();
+        const data = userSnap.val();
+        searchResult.innerHTML = `
+          <div class="card">
+            <strong>${data.displayName}</strong><br>
+            Username: ${data.username}<br>
+            <button onclick="location.href='chat.html?uid=${uid}'">Chat</button>
+          </div>
+        `;
+      } else {
+        searchResult.innerHTML = `<div class="card">Username tidak ditemukan.</div>`;
+      }
+    };
+  </script>
+</body>
+</html>
