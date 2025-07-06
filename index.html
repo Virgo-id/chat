@@ -23,6 +23,7 @@
       justify-content: center;
       align-items: center;
       padding: 1rem;
+      flex-direction: column;
     }
     .container {
       width: 100%;
@@ -97,6 +98,23 @@
       color: #666;
       margin-top: 2rem;
     }
+
+    /* Tombol Pasang Aplikasi */
+    #installBtn {
+      display: none;
+      width: 100%;
+      padding: 0.9rem;
+      background: #1e88e5;
+      color: white;
+      border: none;
+      margin-top: 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #installBtn:hover {
+      background: #1565c0;
+    }
   </style>
 </head>
 <body>
@@ -120,6 +138,9 @@
       <button type="button" class="toggle" onclick="toggleForm()">Sudah punya akun? Masuk</button>
       <div class="error" id="daftarError"></div>
     </form>
+
+    <!-- Tombol Pasang Aplikasi -->
+    <button id="installBtn">Pasang Aplikasi</button>
 
     <footer>Ochat © 2025</footer>
   </div>
@@ -249,6 +270,32 @@
         .then(() => console.log('Service Worker terdaftar'))
         .catch(err => console.error('Service Worker gagal daftar', err));
     }
+  </script>
+
+  <!-- Script tombol pasang aplikasi -->
+  <script>
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      installBtn.style.display = 'none';
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('Pengguna menerima pemasangan aplikasi');
+        } else {
+          console.log('Pengguna menolak pemasangan aplikasi');
+        }
+        deferredPrompt = null;
+      }
+    });
   </script>
 </body>
 </html>
