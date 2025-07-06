@@ -117,7 +117,7 @@
 
   <div id="chatBox">Memuat...</div>
 
-  <form id="inputForm" onsubmit="sendMessage(event)">
+  <form id="inputForm">
     <input type="text" id="msgInput" placeholder="Ketik pesan..." autocomplete="off" required />
     <button id="sendBtn">Kirim</button>
   </form>
@@ -182,7 +182,7 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    function sendMessage(e) {
+    document.getElementById("inputForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const text = msgInput.value.trim();
       if (!text) return;
@@ -194,7 +194,7 @@
       };
       chatRef.push(msg);
       msgInput.value = "";
-    }
+    });
   </script>
 </body>
 </html>

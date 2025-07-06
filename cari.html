@@ -22,24 +22,21 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding: 16px 16px 8px;
+      padding: 1rem;
       flex-wrap: wrap;
     }
-
     .headerLeft h1 {
       font-size: 1.8rem;
       margin: 0;
       padding-bottom: 4px;
       border-bottom: 2px solid white;
     }
-
     .headerLeft h2 {
       font-size: 1rem;
       font-weight: normal;
       color: #aaa;
       margin: 5px 0 0;
     }
-
     .headerRight button {
       background: none;
       color: white;
@@ -52,7 +49,6 @@
       padding: 0 16px;
       margin-top: 10px;
     }
-
     #searchInput {
       width: 100%;
       padding: 10px;
@@ -70,13 +66,13 @@
     }
 
     .hasilItem {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #1e1e1e;
-      margin-bottom: 10px;
-      padding: 10px 12px;
-      border-radius: 6px;
     }
 
     .hasilNama {
@@ -93,11 +89,13 @@
       font-size: 0.9rem;
       cursor: pointer;
     }
-
     .tambahBtn:hover {
       background: #1976d2;
     }
   </style>
+
+  <!-- IndexedDB helper -->
+  <script src="https://unpkg.com/idb@7/build/iife/index-min.js"></script>
 </head>
 <body>
   <header>
@@ -135,10 +133,23 @@
     const username = localStorage.getItem("username");
     const displayName = localStorage.getItem("displayName");
 
+    let dbKontak;
+
     if (!uid || !username) {
       alert("Anda belum login.");
       location.href = "index.html";
     }
+
+    // Inisialisasi IndexedDB
+    idb.openDB("OchatDB", 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("kontak")) {
+          db.createObjectStore("kontak", { keyPath: "uid" });
+        }
+      }
+    }).then(db => {
+      dbKontak = db;
+    });
 
     function cariKontak() {
       const input = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -160,6 +171,7 @@
           if (userKey === username) return;
 
           const user = data[userKey];
+
           const item = document.createElement("div");
           item.className = "hasilItem";
 
@@ -170,14 +182,28 @@
           const btn = document.createElement("button");
           btn.className = "tambahBtn";
           btn.textContent = "Tambah";
-          btn.onclick = () => {
-            db.ref("kontak/" + uid + "/" + user.uid).set({
+          btn.onclick = async () => {
+            const kontakRef = db.ref("kontak/" + uid + "/" + user.uid);
+            const snapshot = await kontakRef.once("value");
+            if (snapshot.exists()) {
+              alert("Kontak sudah ditambahkan.");
+              return;
+            }
+
+            const dataKontak = {
               uid: user.uid,
               username: userKey,
               displayName: user.displayName || userKey,
               otomatis: false,
               ditambahkan: Date.now()
-            });
+            };
+
+            await kontakRef.set(dataKontak);
+
+            if (dbKontak) {
+              await dbKontak.put("kontak", dataKontak);
+            }
+
             alert("Kontak ditambahkan!");
             history.back();
           };

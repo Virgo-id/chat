@@ -4,15 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ochat</title>
-  
-  <!-- PWA manifest dan tema -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1e88e5" />
-
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
       background: #121212;
@@ -25,96 +20,41 @@
       padding: 1rem;
       flex-direction: column;
     }
-    .container {
-      width: 100%;
-      max-width: 400px;
-    }
+    .container { width: 100%; max-width: 400px; }
     h1 {
-      font-size: 2rem;
-      text-align: center;
-      margin-bottom: 0.3rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid white;
-      width: fit-content;
-      margin-left: auto;
-      margin-right: auto;
+      font-size: 2rem; text-align: center;
+      margin-bottom: 0.3rem; padding-bottom: 0.5rem;
+      border-bottom: 2px solid white; width: fit-content;
+      margin-left: auto; margin-right: auto;
     }
-    h2 {
-      font-size: 1.1rem;
-      text-align: center;
-      font-weight: normal;
-      color: #aaa;
-      margin-bottom: 1.5rem;
-    }
+    h2 { font-size: 1.1rem; text-align: center; font-weight: normal; color: #aaa; margin-bottom: 1.5rem; }
     input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid #444;
-      padding: 0.75rem 0.5rem;
-      color: white;
-      font-size: 1rem;
-      margin: 0.75rem 0;
-      outline: none;
+      width: 100%; background: transparent; border: none;
+      border-bottom: 2px solid #444; padding: 0.75rem 0.5rem;
+      color: white; font-size: 1rem; margin: 0.75rem 0; outline: none;
     }
-    input::placeholder {
-      color: #aaa;
-    }
+    input::placeholder { color: #aaa; }
     button {
-      width: 100%;
-      padding: 0.9rem;
-      background: #333;
-      color: white;
-      border: none;
-      margin-top: 1rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
+      width: 100%; padding: 0.9rem; background: #333;
+      color: white; border: none; margin-top: 1rem;
+      font-size: 1rem; border-radius: 6px; cursor: pointer;
     }
-    button:hover {
-      background: #444;
-    }
+    button:hover { background: #444; }
     .toggle {
-      background: none;
-      border: none;
-      color: #888;
-      margin-top: 0.8rem;
-      cursor: pointer;
-      font-size: 0.95rem;
-      text-decoration: underline;
+      background: none; border: none; color: #888;
+      margin-top: 0.8rem; cursor: pointer;
+      font-size: 0.95rem; text-decoration: underline;
     }
-    .error {
-      color: red;
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-      text-align: center;
-    }
-    #formDaftar {
-      display: none;
-    }
-    footer {
-      text-align: center;
-      font-size: 0.85rem;
-      color: #666;
-      margin-top: 2rem;
-    }
-
-    /* Tombol Pasang Aplikasi */
+    .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; text-align: center; }
+    #formDaftar { display: none; }
+    footer { text-align: center; font-size: 0.85rem; color: #666; margin-top: 2rem; }
     #installBtn {
-      display: none;
-      width: 100%;
-      padding: 0.9rem;
-      background: #1e88e5;
-      color: white;
-      border: none;
-      margin-top: 1rem;
-      font-size: 1rem;
-      border-radius: 6px;
+      display: none; width: 100%; padding: 0.9rem;
+      background: #1e88e5; color: white; border: none;
+      margin-top: 1rem; font-size: 1rem; border-radius: 6px;
       cursor: pointer;
     }
-    #installBtn:hover {
-      background: #1565c0;
-    }
+    #installBtn:hover { background: #1565c0; }
   </style>
 </head>
 <body>
@@ -139,9 +79,7 @@
       <div class="error" id="daftarError"></div>
     </form>
 
-    <!-- Tombol Pasang Aplikasi -->
     <button id="installBtn">Pasang Aplikasi</button>
-
     <footer>Ochat © 2025</footer>
   </div>
 
@@ -159,30 +97,6 @@
     };
     firebase.initializeApp(config);
     const db = firebase.database();
-
-    const now = Date.now();
-    const batasWaktu = 7 * 24 * 60 * 60 * 1000;
-
-    db.ref("users").once("value", snap => {
-      const allUsers = snap.val() || {};
-      for (let username in allUsers) {
-        const user = allUsers[username];
-        const lastLogin = user.lastLogin || 0;
-        const uid = user.uid;
-        if (now - lastLogin > batasWaktu) {
-          db.ref("users/" + username).remove();
-          db.ref("kontak/" + uid).remove();
-          db.ref("kontak").once("value", kontakSnap => {
-            kontakSnap.forEach(child => {
-              const temanUid = child.key;
-              if (kontakSnap.child(temanUid + "/" + uid).exists()) {
-                db.ref("kontak/" + temanUid + "/" + uid).remove();
-              }
-            });
-          });
-        }
-      }
-    });
 
     function toggleForm() {
       const login = document.getElementById("formLogin");
@@ -203,96 +117,153 @@
       document.getElementById("daftarError").textContent = "";
     }
 
-    function login() {
-      const username = loginUsername.value.trim();
-      const password = loginPassword.value.trim();
-      if (!username || !password) {
-        loginError.textContent = "Isi semua kolom.";
-        return;
-      }
-
-      db.ref("users/" + username).once("value", snap => {
-        if (!snap.exists()) {
-          loginError.textContent = "Username tidak ditemukan.";
-          return;
-        }
-
-        const data = snap.val();
-        if (data.password !== password) {
-          loginError.textContent = "Password salah.";
-          return;
-        }
-
-        db.ref("users/" + username + "/lastLogin").set(Date.now());
-
-        localStorage.setItem("uid", data.uid);
-        localStorage.setItem("username", username);
-        localStorage.setItem("displayName", data.displayName);
-        location.href = "kontak.html";
-      });
+    async function generateKeyPair() {
+      return crypto.subtle.generateKey({
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      }, true, ["encrypt", "decrypt"]);
     }
 
-    function daftar() {
+    async function exportKey(key) {
+      const exported = await crypto.subtle.exportKey("pkcs8", key);
+      return btoa(String.fromCharCode(...new Uint8Array(exported)));
+    }
+
+    async function exportPublicKey(key) {
+      const exported = await crypto.subtle.exportKey("spki", key);
+      return btoa(String.fromCharCode(...new Uint8Array(exported)));
+    }
+
+    async function encryptPrivateKey(privateKey, password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+      );
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt"]
+      );
+      const encoded = await crypto.subtle.exportKey("pkcs8", privateKey);
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, encoded);
+      return {
+        encryptedPrivateKey: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+        salt: btoa(String.fromCharCode(...salt)),
+        iv: btoa(String.fromCharCode(...iv))
+      };
+    }
+
+    async function decryptPrivateKey(encryptedBase64, password, saltBase64, ivBase64) {
+      const encrypted = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+      const salt = Uint8Array.from(atob(saltBase64), c => c.charCodeAt(0));
+      const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+      );
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
+      );
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encrypted);
+      const privateKey = await crypto.subtle.importKey(
+        "pkcs8", decrypted, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["decrypt"]
+      );
+      const exported = await crypto.subtle.exportKey("pkcs8", privateKey);
+      return btoa(String.fromCharCode(...new Uint8Array(exported)));
+    }
+
+    async function daftar() {
       const username = daftarUsername.value.trim();
       const displayName = daftarDisplay.value.trim();
       const password = daftarPassword.value.trim();
       if (!username || !displayName || !password) {
-        daftarError.textContent = "Isi semua kolom.";
-        return;
+        daftarError.textContent = "Isi semua kolom."; return;
       }
 
-      db.ref("users/" + username).once("value", snap => {
-        if (snap.exists()) {
-          daftarError.textContent = "Username sudah digunakan.";
-          return;
-        }
+      const userSnap = await db.ref("users/" + username).once("value");
+      if (userSnap.exists()) {
+        daftarError.textContent = "Username sudah digunakan."; return;
+      }
 
-        const uid = Date.now().toString();
-        db.ref("users/" + username).set({
-          uid,
-          displayName,
-          password,
-          lastLogin: Date.now()
-        });
+      const uid = Date.now().toString();
+      const keyPair = await generateKeyPair();
+      const publicKey = await exportPublicKey(keyPair.publicKey);
+      const { encryptedPrivateKey, salt, iv } = await encryptPrivateKey(keyPair.privateKey, password);
 
-        localStorage.setItem("uid", uid);
-        localStorage.setItem("username", username);
-        localStorage.setItem("displayName", displayName);
-        location.href = "kontak.html";
+      await db.ref("users/" + username).set({
+        uid, displayName, password,
+        publicKey, encryptedPrivateKey, salt, iv,
+        lastLogin: Date.now()
       });
+
+      localStorage.setItem("uid", uid);
+      localStorage.setItem("username", username);
+      localStorage.setItem("displayName", displayName);
+
+      const exported = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+      localStorage.setItem("privateKey", btoa(String.fromCharCode(...new Uint8Array(exported))));
+      location.href = "kontak.html";
+    }
+
+    async function login() {
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value.trim();
+      if (!username || !password) {
+        loginError.textContent = "Isi semua kolom."; return;
+      }
+
+      const snap = await db.ref("users/" + username).once("value");
+      if (!snap.exists()) {
+        loginError.textContent = "Username tidak ditemukan."; return;
+      }
+
+      const data = snap.val();
+      if (data.password !== password) {
+        loginError.textContent = "Password salah."; return;
+      }
+
+      try {
+        const privateKeyB64 = await decryptPrivateKey(data.encryptedPrivateKey, password, data.salt, data.iv);
+        localStorage.setItem("privateKey", privateKeyB64);
+      } catch (e) {
+        loginError.textContent = "Gagal dekripsi kunci. Cek password."; return;
+      }
+
+      localStorage.setItem("uid", data.uid);
+      localStorage.setItem("username", username);
+      localStorage.setItem("displayName", data.displayName);
+      db.ref("users/" + username + "/lastLogin").set(Date.now());
+      location.href = "kontak.html";
     }
   </script>
 
-  <!-- Pendaftaran Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(() => console.log('Service Worker terdaftar'))
         .catch(err => console.error('Service Worker gagal daftar', err));
     }
-  </script>
 
-  <!-- Script tombol pasang aplikasi -->
-  <script>
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
-
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       installBtn.style.display = 'block';
     });
-
     installBtn.addEventListener('click', async () => {
       installBtn.style.display = 'none';
       if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          console.log('Pengguna menerima pemasangan aplikasi');
-        } else {
-          console.log('Pengguna menolak pemasangan aplikasi');
-        }
+        console.log(outcome === 'accepted'
+          ? 'Pengguna menerima pemasangan aplikasi'
+          : 'Pengguna menolak pemasangan aplikasi');
         deferredPrompt = null;
       }
     });

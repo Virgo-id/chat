@@ -264,7 +264,9 @@
           const info = data[kontakUid];
           const usernameTeman = info.username;
           const displayNameTeman = info.displayName || usernameTeman;
-          listenToChat(kontakUid, usernameTeman, displayNameTeman);
+          if (!kontakMap[kontakUid]) {
+            listenToChat(kontakUid, usernameTeman, displayNameTeman);
+          }
         });
       });
 
