@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ochat</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1rem;
+      flex-wrap: wrap;
+    }
+    .headerLeft h1 {
+      font-size: 1.8rem;
+      margin: 0;
+      padding-bottom: 4px;
+      border-bottom: 2px solid white;
+    }
+    .headerLeft h2 {
+      font-size: 1rem;
+      font-weight: normal;
+      color: #aaa;
+      margin: 5px 0 0;
+    }
+    .headerRight {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .headerRight button {
+      background: none;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #kontakList {
+      flex: 1;
+      padding: 0 1rem 1rem;
+    }
+    .kontakItem {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      position: relative;
+      width: 100%;
+    }
+    .kontakName {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .kontakLast {
+      font-size: 0.9rem;
+      color: #ccc;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .hapusBtn {
+      position: absolute;
+      top: 0.6rem;
+      right: 1rem;
+      background: none;
+      color: #999;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .hapusBtn:hover {
+      color: red;
+    }
+    .unreadCount {
+      position: absolute;
+      bottom: 0.6rem;
+      right: 1rem;
+      background: #f44336;
+      color: white;
+      border-radius: 1rem;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    #popupConfirm {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      text-align: center;
+      z-index: 999;
+      border-top: 2px solid #444;
+    }
+    #popupConfirm button {
+      margin: 10px 5px 0 5px;
+      padding: 10px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #btnBatal {
+      background: #555;
+      color: white;
+    }
+    #btnHapus {
+      background: red;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="headerLeft">
+      <h1>Ochat</h1>
+      <h2 id="headerUser">Halo</h2>
+    </div>
+    <div class="headerRight">
+      <button onclick="location.href='cari.html'">Cari</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div id="kontakList">Memuat kontak...</div>
+
+  <div id="popupConfirm">
+    <div id="popupText">Yakin ingin menghapus kontak ini?</div>
+    <div style="margin-top: 10px;">
+      <button id="btnBatal">Batal</button>
+      <button id="btnHapus">Hapus</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+  <script>
+    const config = {
+      apiKey: "AIzaSyDPRX2nyEeLJsmXgwahVoo48tH4qNgR-QA",
+      authDomain: "chat-ef550.firebaseapp.com",
+      databaseURL: "https://chat-ef550-default-rtdb.firebaseio.com",
+      projectId: "chat-ef550",
+      storageBucket: "chat-ef550.appspot.com",
+      messagingSenderId: "126809001422",
+      appId: "1:126809001422:web:73c0acc196642f1adf6f9f"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    const uid = localStorage.getItem("uid");
+    const username = localStorage.getItem("username");
+    const displayName = localStorage.getItem("displayName");
+
+    if (!uid || !username) {
+      alert("Anda belum login!");
+      location.href = "index.html";
+    }
+
+    document.getElementById("headerUser").textContent = "Halo, " + displayName;
+    const kontakList = document.getElementById("kontakList");
+    const popup = document.getElementById("popupConfirm");
+    const btnBatal = document.getElementById("btnBatal");
+    const btnHapus = document.getElementById("btnHapus");
+
+    let kontakMap = {};
+    let kontakUidToDelete = null;
+
+    function getChatKey(uid1, uid2) {
+      return uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
+    }
+
+    function updateKontakCard(kontakUid, displayName, username, lastText, unreadCount) {
+      if (kontakList.textContent === "Memuat kontak...") {
+        kontakList.textContent = "";
+      }
+
+      let item = kontakMap[kontakUid];
+      if (!item) {
+        const div = document.createElement("div");
+        div.className = "kontakItem";
+
+        const nama = document.createElement("div");
+        nama.className = "kontakName";
+        nama.textContent = displayName;
+
+        const last = document.createElement("div");
+        last.className = "kontakLast";
+        last.textContent = lastText;
+
+        const hapusBtn = document.createElement("button");
+        hapusBtn.className = "hapusBtn";
+        hapusBtn.textContent = "Hapus";
+        hapusBtn.onclick = (e) => {
+          e.stopPropagation();
+          kontakUidToDelete = kontakUid;
+          popup.style.display = "flex";
+        };
+
+        const badge = document.createElement("div");
+        badge.className = "unreadCount";
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? "inline-block" : "none";
+
+        div.appendChild(nama);
+        div.appendChild(last);
+        div.appendChild(hapusBtn);
+        div.appendChild(badge);
+
+        div.onclick = () => {
+          localStorage.setItem("chatWithUid", kontakUid);
+          localStorage.setItem("chatWithUsername", username);
+          localStorage.setItem("chatWithDisplayName", displayName);
+          location.href = "chat.html";
+        };
+
+        kontakList.appendChild(div);
+        kontakMap[kontakUid] = { div, last, badge };
+      } else {
+        item.last.textContent = lastText;
+        item.badge.textContent = unreadCount;
+        item.badge.style.display = unreadCount > 0 ? "inline-block" : "none";
+      }
+    }
+
+    function listenToChat(kontakUid, username, displayName) {
+      const chatKey = getChatKey(uid, kontakUid);
+      const chatRef = db.ref("chat/" + chatKey);
+      chatRef.on("value", snap => {
+        let lastText = "";
+        let unread = 0;
+        snap.forEach(msg => {
+          const val = msg.val();
+          lastText = val.text || lastText;
+          if (val.to === uid && !val["readBy_" + uid]) unread++;
+        });
+        updateKontakCard(kontakUid, displayName, username, lastText, unread);
+      });
+    }
+
+    function loadKontak() {
+      db.ref("kontak/" + uid).on("value", snap => {
+        const data = snap.val() || {};
+        Object.keys(data).forEach(kontakUid => {
+          const info = data[kontakUid];
+          const usernameTeman = info.username;
+          const displayNameTeman = info.displayName || usernameTeman;
+          listenToChat(kontakUid, usernameTeman, displayNameTeman);
+        });
+      });
+
+      db.ref("chat").on("child_added", chatSnap => {
+        chatSnap.forEach(msgSnap => {
+          const val = msgSnap.val();
+          if (val.to === uid) {
+            const pengirim = val.from;
+            db.ref("kontak/" + uid + "/" + pengirim).once("value", snap => {
+              if (!snap.exists()) {
+                db.ref("users").orderByChild("uid").equalTo(pengirim).once("value", userSnap => {
+                  const valUser = userSnap.val();
+                  if (!valUser) return;
+                  const uname = Object.keys(valUser)[0];
+                  const dataUser = valUser[uname];
+                  const display = dataUser.displayName || uname;
+
+                  db.ref("kontak/" + uid + "/" + pengirim).set({
+                    uid: pengirim,
+                    username: uname,
+                    displayName: display,
+                    otomatis: true,
+                    dariChat: true,
+                    ditambahkan: Date.now()
+                  });
+
+                  listenToChat(pengirim, uname, display);
+                });
+              }
+            });
+          }
+        });
+      });
+    }
+
+    btnBatal.onclick = () => {
+      popup.style.display = "none";
+      kontakUidToDelete = null;
+    };
+
+    btnHapus.onclick = () => {
+      if (kontakUidToDelete) {
+        db.ref("kontak/" + uid + "/" + kontakUidToDelete).remove(() => {
+          if (kontakMap[kontakUidToDelete]) {
+            kontakMap[kontakUidToDelete].div.remove();
+            delete kontakMap[kontakUidToDelete];
+          }
+          popup.style.display = "none";
+          kontakUidToDelete = null;
+        });
+      }
+    };
+
+    function logout() {
+      localStorage.clear();
+      location.href = "index.html";
+    }
+
+    loadKontak();
+  </script>
+</body>
+</html>

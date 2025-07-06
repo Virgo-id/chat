@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ochat</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 16px 16px 8px;
+      flex-wrap: wrap;
+    }
+
+    .headerLeft h1 {
+      font-size: 1.8rem;
+      margin: 0;
+      padding-bottom: 4px;
+      border-bottom: 2px solid white;
+    }
+
+    .headerLeft h2 {
+      font-size: 1rem;
+      font-weight: normal;
+      color: #aaa;
+      margin: 5px 0 0;
+    }
+
+    .headerRight button {
+      background: none;
+      color: white;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    #searchBox {
+      padding: 0 16px;
+      margin-top: 10px;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 10px;
+      background: #1c1c1c;
+      border: none;
+      border-bottom: 2px solid #444;
+      color: white;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    #hasilList {
+      flex: 1;
+      padding: 10px 16px;
+    }
+
+    .hasilItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e1e1e;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .hasilNama {
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    .tambahBtn {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .tambahBtn:hover {
+      background: #1976d2;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="headerLeft">
+      <h1>Ochat</h1>
+      <h2>Cari Kontak</h2>
+    </div>
+    <div class="headerRight">
+      <button onclick="history.back()">←</button>
+    </div>
+  </header>
+
+  <div id="searchBox">
+    <input type="text" id="searchInput" placeholder="Ketik username..." oninput="cariKontak()" autocomplete="off">
+  </div>
+
+  <div id="hasilList">Masukkan username untuk mencari.</div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+  <script>
+    const config = {
+      apiKey: "AIzaSyDPRX2nyEeLJsmXgwahVoo48tH4qNgR-QA",
+      authDomain: "chat-ef550.firebaseapp.com",
+      databaseURL: "https://chat-ef550-default-rtdb.firebaseio.com",
+      projectId: "chat-ef550",
+      storageBucket: "chat-ef550.appspot.com",
+      messagingSenderId: "126809001422",
+      appId: "1:126809001422:web:73c0acc196642f1adf6f9f"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    const uid = localStorage.getItem("uid");
+    const username = localStorage.getItem("username");
+    const displayName = localStorage.getItem("displayName");
+
+    if (!uid || !username) {
+      alert("Anda belum login.");
+      location.href = "index.html";
+    }
+
+    function cariKontak() {
+      const input = document.getElementById("searchInput").value.trim().toLowerCase();
+      const hasilList = document.getElementById("hasilList");
+      if (!input) {
+        hasilList.innerHTML = "Masukkan username untuk mencari.";
+        return;
+      }
+
+      db.ref("users").orderByKey().startAt(input).endAt(input + "\uf8ff").once("value", snap => {
+        hasilList.innerHTML = "";
+        if (!snap.exists()) {
+          hasilList.innerHTML = "Tidak ditemukan.";
+          return;
+        }
+
+        const data = snap.val();
+        Object.keys(data).forEach(userKey => {
+          if (userKey === username) return;
+
+          const user = data[userKey];
+          const item = document.createElement("div");
+          item.className = "hasilItem";
+
+          const nama = document.createElement("div");
+          nama.className = "hasilNama";
+          nama.textContent = user.displayName || userKey;
+
+          const btn = document.createElement("button");
+          btn.className = "tambahBtn";
+          btn.textContent = "Tambah";
+          btn.onclick = () => {
+            db.ref("kontak/" + uid + "/" + user.uid).set({
+              uid: user.uid,
+              username: userKey,
+              displayName: user.displayName || userKey,
+              otomatis: false,
+              ditambahkan: Date.now()
+            });
+            alert("Kontak ditambahkan!");
+            history.back();
+          };
+
+          item.appendChild(nama);
+          item.appendChild(btn);
+          hasilList.appendChild(item);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

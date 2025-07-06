@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ochat</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+    }
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 0.3rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid white;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h2 {
+      font-size: 1.1rem;
+      text-align: center;
+      font-weight: normal;
+      color: #aaa;
+      margin-bottom: 1.5rem;
+    }
+    input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #444;
+      padding: 0.75rem 0.5rem;
+      color: white;
+      font-size: 1rem;
+      margin: 0.75rem 0;
+      outline: none;
+    }
+    input::placeholder {
+      color: #aaa;
+    }
+    button {
+      width: 100%;
+      padding: 0.9rem;
+      background: #333;
+      color: white;
+      border: none;
+      margin-top: 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #444;
+    }
+    .toggle {
+      background: none;
+      border: none;
+      color: #888;
+      margin-top: 0.8rem;
+      cursor: pointer;
+      font-size: 0.95rem;
+      text-decoration: underline;
+    }
+    .error {
+      color: red;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+    #formDaftar {
+      display: none;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ochat</h1>
+    <h2 id="judulForm">Masuk</h2>
+
+    <form id="formLogin" autocomplete="off">
+      <input type="text" id="loginUsername" placeholder="Username" autocomplete="off" />
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="off" />
+      <button type="button" onclick="login()">Masuk</button>
+      <button type="button" class="toggle" onclick="toggleForm()">Belum punya akun? Daftar</button>
+      <div class="error" id="loginError"></div>
+    </form>
+
+    <form id="formDaftar" autocomplete="off">
+      <input type="text" id="daftarUsername" placeholder="Username" autocomplete="off" />
+      <input type="text" id="daftarDisplay" placeholder="Nama Tampil" autocomplete="off" />
+      <input type="password" id="daftarPassword" placeholder="Password" autocomplete="off" />
+      <button type="button" onclick="daftar()">Daftar</button>
+      <button type="button" class="toggle" onclick="toggleForm()">Sudah punya akun? Masuk</button>
+      <div class="error" id="daftarError"></div>
+    </form>
+
+    <footer>Ochat © 2025</footer>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+  <script>
+    const config = {
+      apiKey: "AIzaSyDPRX2nyEeLJsmXgwahVoo48tH4qNgR-QA",
+      authDomain: "chat-ef550.firebaseapp.com",
+      databaseURL: "https://chat-ef550-default-rtdb.firebaseio.com",
+      projectId: "chat-ef550",
+      storageBucket: "chat-ef550.appspot.com",
+      messagingSenderId: "126809001422",
+      appId: "1:126809001422:web:73c0acc196642f1adf6f9f"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    const now = Date.now();
+    const batasWaktu = 7 * 24 * 60 * 60 * 1000;
+
+    db.ref("users").once("value", snap => {
+      const allUsers = snap.val() || {};
+      for (let username in allUsers) {
+        const user = allUsers[username];
+        const lastLogin = user.lastLogin || 0;
+        const uid = user.uid;
+        if (now - lastLogin > batasWaktu) {
+          db.ref("users/" + username).remove();
+          db.ref("kontak/" + uid).remove();
+          db.ref("kontak").once("value", kontakSnap => {
+            kontakSnap.forEach(child => {
+              const temanUid = child.key;
+              if (kontakSnap.child(temanUid + "/" + uid).exists()) {
+                db.ref("kontak/" + temanUid + "/" + uid).remove();
+              }
+            });
+          });
+        }
+      }
+    });
+
+    function toggleForm() {
+      const login = document.getElementById("formLogin");
+      const daftar = document.getElementById("formDaftar");
+      const judul = document.getElementById("judulForm");
+
+      if (login.style.display !== "none") {
+        login.style.display = "none";
+        daftar.style.display = "block";
+        judul.textContent = "Daftar";
+      } else {
+        login.style.display = "block";
+        daftar.style.display = "none";
+        judul.textContent = "Masuk";
+      }
+
+      document.getElementById("loginError").textContent = "";
+      document.getElementById("daftarError").textContent = "";
+    }
+
+    function login() {
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value.trim();
+      if (!username || !password) {
+        loginError.textContent = "Isi semua kolom.";
+        return;
+      }
+
+      db.ref("users/" + username).once("value", snap => {
+        if (!snap.exists()) {
+          loginError.textContent = "Username tidak ditemukan.";
+          return;
+        }
+
+        const data = snap.val();
+        if (data.password !== password) {
+          loginError.textContent = "Password salah.";
+          return;
+        }
+
+        db.ref("users/" + username + "/lastLogin").set(Date.now());
+
+        localStorage.setItem("uid", data.uid);
+        localStorage.setItem("username", username);
+        localStorage.setItem("displayName", data.displayName);
+        location.href = "kontak.html";
+      });
+    }
+
+    function daftar() {
+      const username = daftarUsername.value.trim();
+      const displayName = daftarDisplay.value.trim();
+      const password = daftarPassword.value.trim();
+      if (!username || !displayName || !password) {
+        daftarError.textContent = "Isi semua kolom.";
+        return;
+      }
+
+      db.ref("users/" + username).once("value", snap => {
+        if (snap.exists()) {
+          daftarError.textContent = "Username sudah digunakan.";
+          return;
+        }
+
+        const uid = Date.now().toString();
+        db.ref("users/" + username).set({
+          uid,
+          displayName,
+          password,
+          lastLogin: Date.now()
+        });
+
+        localStorage.setItem("uid", uid);
+        localStorage.setItem("username", username);
+        localStorage.setItem("displayName", displayName);
+        location.href = "kontak.html";
+      });
+    }
+  </script>
+</body>
+</html>
